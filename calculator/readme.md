@@ -1,0 +1,1 @@
+This is a simple calculator app that evaluates mathematical expressions. To use it, run `python main.py "<expression>"`. For example: `python main.py "3 + 5"`.
