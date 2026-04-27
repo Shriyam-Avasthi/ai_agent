@@ -1,47 +1,40 @@
-from google.genai import types
-
+import json
 from config import WORKING_DIR
-from functions.get_file_content import get_file_content, schema_get_file_content
-from functions.get_files_info import get_files_info, schema_get_files_info
-from functions.run_python_file import run_python_file, schema_run_python_file
-from functions.write_file import schema_write_file, write_file
+from functions.get_file_content import get_file_content
+from functions.get_files_info import get_files_info
+from functions.run_python_file import run_python_file
+from functions.write_file import write_file
+
+TOOL_REGISTRY = {
+    "get_files_info": get_files_info,
+    "get_file_content": get_file_content,
+    "write_file": write_file,
+    "run_python_file": run_python_file,
+}
 
 working_directory = WORKING_DIR
 
-
-def call_function(function_call_part, verbose=False):
+def call_function(function_name: str, args: dict, verbose: bool = False) -> str:
+    """Executes a requested tool call and returns the result as a string."""
     if verbose:
-        print(f"Calling function: {function_call_part.name}{[function_call_part.args]}")
+        print(f"Calling function: {function_name}({json.dumps(args)})")
     else:
-        print(f"- Calling function: {function_call_part.name}")
+        print(f"- Calling function: {function_name}")
 
-    result = ""
-    if function_call_part.name == "get_files_info":
-        result = get_files_info(working_directory, **function_call_part.args)
-    elif function_call_part.name == "get_file_content":
-        result = get_file_content(working_directory, **function_call_part.args)
-    elif function_call_part.name == "write_file":
-        result = write_file(working_directory, **function_call_part.args)
-    elif function_call_part.name == "run_python_file":
-        result = run_python_file(working_directory, **function_call_part.args)
-    if result == "":
+    func = TOOL_REGISTRY.get(function_name)
+    if not func:
+        error_msg = f"Error: Unknown function '{function_name}'. Available functions are: {list(TOOL_REGISTRY.keys())}"
+        if verbose: print(error_msg)
+        return error_msg
 
-        return types.Content(
-            role="tool",
-            parts=[
-                types.Part.from_function_response(
-                    name=function_call_part.name,
-                    response={"error": f"Unknown function: {function_call_part}"},
-                )
-            ],
-        )
-
-    return types.Content(
-            role="tool",
-            parts=[
-                types.Part.from_function_response(
-                    name=function_call_part.name,
-                    response={"result": result},
-                )
-            ],
-        )
+    try:
+        result = func(working_directory, **args)
+        
+        if result is None:
+            return "Success: Function executed but returned no output."
+        return str(result)
+        
+    except Exception as e:
+        error_msg = f"Error executing {function_name}: {str(e)}"
+        if verbose: print(error_msg)
+        return error_msg

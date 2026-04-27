@@ -1,30 +1,55 @@
-# calculator/main.py
+from vault import Vault
 
-import sys
+vault = Vault()
+sequence = ''
 
-from pkg.calculator import Calculator
-from pkg.render import format_json_output
+print("Welcome to the Secret Calculator!")
+print("Enter expressions to calculate or a secret sequence to enter the vault.")
 
-
-def main():
-    calculator = Calculator()
-    if len(sys.argv) <= 1:
-        print("Calculator App")
-        print('Usage: python main.py "<expression>"')
-        print('Example: python main.py "3 + 5"')
-        return
-
-    expression = " ".join(sys.argv[1:])
-    try:
-        result = calculator.evaluate(expression)
-        if result is not None:
-            to_print = format_json_output(expression, result)
-            print(to_print)
-        else:
-            print("Error: Expression is empty or contains only whitespace.")
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-if __name__ == "__main__":
-    main()
+while True:
+    user_input = input('\n> ')
+    if not user_input:
+        continue
+        
+    sequence += user_input
+    
+    if vault.open_vault(sequence):
+        print('\n*** Secret Vault Opened! ***')
+        while True:
+            print('\nVault Menu:')
+            print('1. Add secret file')
+            print('2. Browse and read files')
+            print('3. Exit Vault')
+            choice = input('Choose an option: ')
+            
+            if choice == '1':
+                file_name = input('Enter file name: ')
+                content = input('Enter content: ')
+                vault.add_file(file_name, content)
+                print('File saved successfully.')
+            elif choice == '2':
+                files = vault.browse_files()
+                if files:
+                    read_choice = input('Enter file name to read (or press Enter to go back): ')
+                    if read_choice:
+                        print(f'\n--- {read_choice} ---\n{vault.get_file_content(read_choice)}\n---')
+            elif choice == '3':
+                print('Closing vault...')
+                break
+            else:
+                print('Invalid choice.')
+        sequence = ''
+    else:
+        # Perform calculator operations
+        try:
+            # We use eval carefully here for a simple calculator
+            # In a real app, we'd use a safer parser
+            result = eval(user_input)
+            print(f"Result: {result}")
+            # Reset sequence if the input was a valid calculation and didn't start a potential secret
+            # But for simplicity, we only reset sequence when the vault is opened or’
+            # we can keep it and only check for the suffix.
+        except Exception as e:
+            print(f"Error: {e}")
+            # If it's not a valid expression, it might be part of the secret sequence.
+            # We don't clear sequence here.

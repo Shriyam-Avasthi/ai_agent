@@ -1,7 +1,5 @@
 import os
 
-from google.genai import types
-
 
 def write_file(working_directory, file_path, content):
 
@@ -26,20 +24,43 @@ def write_file(working_directory, file_path, content):
         return f"Failed to write to file: {file_path}, {e}"
 
 
-schema_write_file = types.FunctionDeclaration(
-    name="write_file",
-    description="Overwrites an existing file or writes to a new file if it doesn't exists (and creates required parent directories safely), constrained to the current working directory",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "file_path": types.Schema(
-                type=types.Type.STRING,
-                description="The path to the file to write.",
-            ), 
-            "content": types.Schema(
-                type=types.Type.STRING,
-                description="The contents to write to the file as a string",
-            ),
+# schema_write_file = types.FunctionDeclaration(
+#     name="write_file",
+#     description="Overwrites an existing file or writes to a new file if it doesn't exists (and creates required parent directories safely), constrained to the current working directory",
+#     parameters=types.Schema(
+#         type=types.Type.OBJECT,
+#         properties={
+#             "file_path": types.Schema(
+#                 type=types.Type.STRING,
+#                 description="The path to the file to write.",
+#             ),
+#             "content": types.Schema(
+#                 type=types.Type.STRING,
+#                 description="The contents to write to the file as a string",
+#             ),
+#         },
+#     ),
+# )
+
+
+schema_write_file = {
+    "type": "function",
+    "function": {
+        "name": "write_file",
+        "description": "Overwrites an existing file or writes to a new file if it doesn't exists (and creates required parent directories safely), constrained to the current working directory",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "The path to the file to write.",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The contents to write to the file as a string",
+                },
+            },
+            "required": ["file_path", "content"],
         },
-    ),
-)
+    },
+}
