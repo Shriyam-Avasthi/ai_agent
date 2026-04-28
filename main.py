@@ -5,14 +5,15 @@ import time
 from typing import Any
 
 import litellm
-from dotenv import load_dotenv
 
 from call_function import call_function
-from config import WORKING_DIR
+from config import PROXY_URL, WORKING_DIR
 from functions.get_file_content import schema_get_file_content
 from functions.get_files_info import schema_get_files_info
+from functions.manage_scratchpad import schema_manage_scratchpad
 from functions.run_python_file import schema_run_python_file
 from functions.write_file import schema_write_file
+from hierarchicalContextManager import HierarchicalContextManager
 
 litellm.drop_params = True
 
@@ -37,6 +38,7 @@ def main():
         2. get_file_content
         3. run_python_file
         4. get_files_info
+        5. manage_scratchpad
 
     CRITICAL NOTE:
         1. Be cautious about the tool call syntax and don't hallucinate on the tools. The only tools available are the ones explicitly given to you.
@@ -45,21 +47,19 @@ def main():
     #     types.Content(role="user", parts=[types.Part(text=prompt)]),
     # ]
 
-    messages: list[dict[str, Any]] = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": prompt},
-    ]
+    context = HierarchicalContextManager(WORKING_DIR)
+    context.set_core_prompts(system_prompt, prompt)
 
     # load_dotenv()
     # gemini_api_key = os.environ.get("GEMINI_API_KEY")
     # client = genai.Client(api_key=api_key)
-    PROXY_URL = "http://localhost:4000"
 
     available_functions = [
         schema_get_files_info,
         schema_get_file_content,
         schema_run_python_file,
         schema_write_file,
+        schema_manage_scratchpad,
     ]
 
     # config = types.GenerateContentConfig(
@@ -80,7 +80,7 @@ def main():
                 model="openai/orchestrator",  # Or whichever model you are routing to
                 api_base=PROXY_URL,
                 api_key="sk-dummy-key",
-                messages=messages,
+                messages=context.get_messages_for_api(),
                 tools=available_functions,
                 tool_choice="auto",
                 stream=False,
@@ -96,7 +96,7 @@ def main():
         msg_dict.pop("provider_specific_fields", None)
         msg_dict.pop("reasoning_content", None)
 
-        messages.append(msg_dict)
+        context.add_message(msg_dict)
 
         # 4. Check if the model wants to call tools
         if assistant_message.tool_calls is not None:
@@ -118,7 +118,7 @@ def main():
                     function_name, function_args, verbose_flag
                 )
 
-                messages.append(
+                context.add_message(
                     {
                         "role": "tool",
                         "tool_call_id": tool_call.id,

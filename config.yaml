@@ -2,13 +2,13 @@ model_list:
   # 1. The Orchestrator (Fast, tool-calling expert)
   - model_name: orchestrator
     litellm_params:
-      # model: cerebras/qwen-3-235b-a22b-instruct-2507
-      # api_key: os.environ/CEREBRAS_API_KEY
-      # rpm: 5
-      model: gemini/gemma-4-31b-it
-      api_key: os.environ/GEMINI_API_KEY
-      drop_params: true
-      rpm: 30
+      model: cerebras/qwen-3-235b-a22b-instruct-2507
+      api_key: os.environ/CEREBRAS_API_KEY
+      rpm: 5
+      # model: gemini/gemma-4-31b-it
+      # api_key: os.environ/GEMINI_API_KEY
+      # drop_params: true
+      # rpm: 30
       tpm: 8000
 
   # 2. The Heavy Context Analyzer (1M Token Window)
@@ -28,6 +28,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-chat
       api_key: os.environ/OPENROUTER_API_KEY
+
+  # 2. The Heavy Context Analyzer (1M Token Window)
+  - model_name: lightweight-helper
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: os.environ/GROQ_API_KEY
 
 # router_settings:
 #   # If Groq rate limits, automatically fallback to OpenRouter or Gemini

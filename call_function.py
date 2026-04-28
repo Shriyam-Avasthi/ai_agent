@@ -2,6 +2,7 @@ import json
 from config import WORKING_DIR
 from functions.get_file_content import get_file_content
 from functions.get_files_info import get_files_info
+from functions.manage_scratchpad import manage_scratchpad
 from functions.run_python_file import run_python_file
 from functions.write_file import write_file
 
@@ -10,6 +11,7 @@ TOOL_REGISTRY = {
     "get_file_content": get_file_content,
     "write_file": write_file,
     "run_python_file": run_python_file,
+    "manage_scratchpad": manage_scratchpad
 }
 
 working_directory = WORKING_DIR
