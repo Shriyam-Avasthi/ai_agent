@@ -13,10 +13,12 @@ class HierarchicalContextManager:
         working_directory: str,
         max_total_tokens: int = 60000,
         max_active_tokens: int = 40000,
+        verbose: bool = False,
     ):
         self.encoder = tiktoken.encoding_for_model("gpt-4o")
         self.max_total_tokens = max_total_tokens
         self.max_active_tokens = max_active_tokens
+        self.verbose = verbose
 
         self.working_directory = working_directory
         self.scratchpad_path = os.path.join(working_directory, ".agent_scratchpad.txt")
@@ -59,10 +61,14 @@ class HierarchicalContextManager:
     def set_core_prompts(self, system_content, user_content):
         self.system_prompt = {"role": "system", "content": system_content}
         self.initial_user_query = {"role": "user", "content": user_content}
+        if self.verbose:
+            print(f"Core prompts set:\nSystem Prompt: {self.system_prompt}\nUser Query: {self.initial_user_query}")
 
     def add_message(self, message):
         self.active_messages.append(copy.deepcopy(message))
         self._manage_context()
+        if self.verbose:
+            print(f"Memory updated successfully. New memory: {self.active_messages}")
 
     def _manage_context(self):
         # Keep last 6 messages and truncate earlier ones.
@@ -140,4 +146,6 @@ class HierarchicalContextManager:
             {"role": "system", "content": f"HISTORY SUMMARY:\n{self.rolling_summary}"}
         ]
         final_payload = core + scratchpad + summary_msg + self.active_messages
+        if self.verbose:
+            print(f"Retrieved message for api: {final_payload}")
         return final_payload
