@@ -38,22 +38,20 @@ def list_directory(working_dir: str, target_dir: str = ".") -> str:
     return "\n".join(tree_output)
 
 
-schema_list_directory = (
-    {
-        "type": "function",
-        "function": {
-            "name": "list_directory",
-            "description": "Explores the repository structure. Use this first to understand the layout of the project before reading files. Returns a clean, token-efficient tree view of folders and files.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "target_dir": {
-                        "type": "string",
-                        "description": "The specific directory to list. Default is '.' for the root.",
-                    }
-                },
-                "required": ["target_dir"],
+schema_list_directory = {
+    "type": "function",
+    "function": {
+        "name": "list_directory",
+        "description": "Explores the repository structure. Use this first to understand the layout of the project before reading files. Returns a clean, token-efficient tree view of folders and files.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "target_dir": {
+                    "type": "string",
+                    "description": "The specific directory to list. Default is '.' for the root.",
+                }
             },
+            "required": ["target_dir"],
         },
     },
-)
+}

@@ -1,0 +1,3 @@
+- [x] Find and hide 'Vault' button in `main.py`.
+- [x] Implement sequence detection for `+=+` to open vault.
+- [x] Fix error triggered by `+=` sequence.

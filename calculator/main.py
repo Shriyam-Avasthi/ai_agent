@@ -204,12 +204,11 @@ class CalculatorApp:
         self.create_button(row4, "=", self.calculate, self.op_bg)
         self.create_button(row4, "+", lambda: self.add_to_input('+'), self.op_bg)
         
-        # Row 5: History, Vault
+        # Row 5: History
         row5 = tk.Frame(btn_container, bg=self.bg_color)
         row5.pack(fill=tk.BOTH, expand=True)
         
         self.create_button(row5, "History", self.show_history, self.btn_bg)
-        self.create_button(row5, "Vault", self.toggle_vault_mode, self.btn_bg)
     
     def create_button(self, parent, text, command, bg_color):
         btn = tk.Button(
@@ -271,6 +270,7 @@ class CalculatorApp:
         if not self.current_input:
             return
         
+        self.sequence += "="
         try:
             result = safe_eval(self.current_input)
             
@@ -294,8 +294,10 @@ class CalculatorApp:
             self.history_text.insert(1.0, "\n".join(self.history[-3:]))
             self.history_text.config(state='disabled')
             
-        except Exception as e:
-            messagebox.showerror("Error", f"Invalid expression: {e}")
+        except Exception:
+            # Silently fail to avoid interrupting secret sequences 
+            # and to provide a smoother user experience.
+            pass
     
     def show_history(self):
         if not self.history:

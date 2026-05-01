@@ -1,6 +1,7 @@
 import copy
 import logging
 import os
+import json
 
 import litellm
 import tiktoken
@@ -44,6 +45,14 @@ class HierarchicalContextManager:
             f"HierarchicalContextManager initialized. Max active tokens: {self.max_active_tokens}"
         )
 
+    def _sanitize_msg(self, msg):
+        """
+        Removes all provider-specific bloat (thinking blocks, metadata).
+        Strictly keeps only the standard keys required for inference.
+        """
+        allowed_keys = {"role", "content", "tool_calls", "tool_call_id", "name"}
+        return {k: v for k, v in msg.items() if k in allowed_keys}
+
     def count_tokens(self, text):
         return len(self.encoder.encode(str(text)))
 
@@ -79,6 +88,7 @@ class HierarchicalContextManager:
         logger.debug(
             f"Appended new message to active context. Role: {message.get('role')}"
         )
+        self._dump_conversation_state()
 
     def _manage_context(self):
         # Keep last 6 messages and truncate earlier ones.
@@ -98,7 +108,15 @@ class HierarchicalContextManager:
                         f"Truncated large tool output at index {i} due to age."
                     )
 
-        active_tokens = sum(self.count_tokens(str(m)) for m in self.active_messages)
+                elif (
+                    msg.get("role") == "assistant"
+                    and self.count_tokens(msg.get("content", "")) > 500
+                ):
+                    msg["content"] = "[ASSISTANT THOUGHT TRUNCATED TO SAVE SPACE.]"
+
+        active_tokens = active_tokens = sum(
+            self.count_tokens(str(self._sanitize_msg(m))) for m in self.active_messages
+        )
         logger.debug(
             f"Current active token count: {active_tokens} / {self.max_active_tokens}"
         )
@@ -161,19 +179,64 @@ class HierarchicalContextManager:
             logger.error(
                 "Summarization API call failed. Applying fallback note.", exc_info=True
             )
+
             # Fallback: Just append a note rather than crashing
             self.rolling_summary += (
                 "\n[Note: Some intermediate steps were truncated due to length limits.]"
             )
 
-    def get_messages_for_api(self):
+    def _dump_conversation_state(self):
+        log_path = os.path.join(self.working_directory, "conversation_log.md")
+        
+        try:
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write("# Active Agent Conversation\n\n")
+                f.write("*This file is auto-generated and overwritten during the agent's run.*\n\n---\n")
+                
+                full_context = self.get_messages_for_api(sanitize_messages=False, logging_enabled=False)
+                
+                for msg in full_context:
+                    role = str(msg.get("role", "UNKNOWN")).upper()
+                    content = msg.get("content", "")
+                    tool_calls = msg.get("tool_calls", None)
+                    
+                    f.write(f"### {role}\n")
+                    
+                    if content:
+                        f.write(f"{content}\n\n")
+                    
+                    # Format tool calls cleanly if they exist
+                    if tool_calls:
+                        f.write("**Tool Calls Requested:**\n```json\n")
+                        f.write(json.dumps(tool_calls)) 
+                        f.write("\n```\n\n")
+
+                    for key, value in msg.items():
+                        if key not in ["role", "content", "tool_calls"] and value:
+                            f.write(f"**Hidden Field (`{key}`):**\n```text\n")
+                            f.write(str(value))
+                            f.write("\n```\n\n")
+                        
+                    f.write("---\n")
+                    
+        except Exception as e:
+            logger.error(f"Failed to write conversation log: {e}")
+
+    def get_messages_for_api(self, sanitize_messages=True, logging_enabled=True):
         core = [self.system_prompt, self.initial_user_query]
         scratchpad = [self.get_agent_scratchpad()]
         summary_msg = [
             {"role": "system", "content": f"HISTORY SUMMARY:\n{self.rolling_summary}"}
         ]
-        final_payload = core + scratchpad + summary_msg + self.active_messages
-        logger.debug(
-            f"Assembled final API payload with {len(final_payload)} total messages."
-        )
+        if sanitize_messages: 
+            sanitized_messages = [self._sanitize_msg(m) for m in self.active_messages]
+            
+            final_payload = core + scratchpad + summary_msg + sanitized_messages
+        else:
+            final_payload = core + scratchpad + summary_msg + self.active_messages
+        
+        if logging_enabled:
+            logger.debug(
+                f"Assembled final API payload with {len(final_payload)} total messages."
+            )
         return final_payload

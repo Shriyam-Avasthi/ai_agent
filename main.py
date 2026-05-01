@@ -5,7 +5,7 @@ import time
 import litellm
 
 from call_function import call_function
-from config import PROXY_URL, WORKING_DIR
+from config import PROXY_URL, SYSTEM_PROMPT, WORKING_DIR
 from functions.edit_file import schema_edit_file
 from functions.expand_block import schema_expand_block
 from functions.get_file_skeleton import schema_get_file_skeleton
@@ -36,22 +36,7 @@ def main():
 
     prompt = args.prompt
 
-    system_prompt = f""" You are a helpful AI coding agent. You are currently in the "{WORKING_DIR}" directory.
-
-    When a user asks a question or makes a request, you should use your provided tools to gather information before answering.
-    
-    You have the following tools:
-        1. edit_file
-        2. write_file
-        3. run_python_file
-        4. expand_block
-        5. manage_scratchpad
-        6. get_file_skeleton
-        7. list_directory
-
-    CRITICAL NOTE:
-        1. Be cautious about the tool call syntax and don't hallucinate on the tools. The only tools available are the ones explicitly given to you.
-    """
+    system_prompt = SYSTEM_PROMPT
     # messages = [
     #     types.Content(role="user", parts=[types.Part(text=prompt)]),
     # ]
