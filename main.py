@@ -1,44 +1,53 @@
+import argparse
 import json
-import os
-import sys
 import time
-from typing import Any
 
 import litellm
 
 from call_function import call_function
 from config import PROXY_URL, WORKING_DIR
-from functions.get_file_content import schema_get_file_content
-from functions.get_files_info import schema_get_files_info
+from functions.edit_file import schema_edit_file
+from functions.expand_block import schema_expand_block
+from functions.get_file_skeleton import schema_get_file_skeleton
+from functions.list_directory import schema_list_directory
 from functions.manage_scratchpad import schema_manage_scratchpad
 from functions.run_python_file import schema_run_python_file
 from functions.write_file import schema_write_file
 from hierarchicalContextManager import HierarchicalContextManager
+from logger_setup import setup_logger
+
+# from functions.get_file_content import schema_get_file_content
+# from functions.get_files_info import schema_get_files_info
+
 
 litellm.drop_params = True
 
 
 def main():
-    verbose_flag = False
+    parser = argparse.ArgumentParser(description="AI Coding Agent")
+    parser.add_argument("prompt", type=str, help="The prompt to send to the AI")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose debug logging"
+    )
+    args = parser.parse_args()
 
-    if len(sys.argv) < 2:
-        print("Prompt is missing!")
-        sys.exit(1)
+    logger = setup_logger(args.verbose)
+    logger.info("Starting AI Agent...")
 
-    if (len(sys.argv) == 3) and (sys.argv[2] == "--verbose"):
-        verbose_flag = True
-    prompt = sys.argv[1]
+    prompt = args.prompt
 
     system_prompt = f""" You are a helpful AI coding agent. You are currently in the "{WORKING_DIR}" directory.
 
     When a user asks a question or makes a request, you should use your provided tools to gather information before answering.
     
     You have the following tools:
-        1. write_file
-        2. get_file_content
+        1. edit_file
+        2. write_file
         3. run_python_file
-        4. get_files_info
+        4. expand_block
         5. manage_scratchpad
+        6. get_file_skeleton
+        7. list_directory
 
     CRITICAL NOTE:
         1. Be cautious about the tool call syntax and don't hallucinate on the tools. The only tools available are the ones explicitly given to you.
@@ -55,11 +64,15 @@ def main():
     # client = genai.Client(api_key=api_key)
 
     available_functions = [
-        schema_get_files_info,
-        schema_get_file_content,
+        # schema_get_files_info,
+        # schema_get_file_content,
         schema_run_python_file,
         schema_write_file,
         schema_manage_scratchpad,
+        schema_edit_file,
+        schema_expand_block,
+        schema_get_file_skeleton,
+        schema_list_directory,
     ]
 
     # config = types.GenerateContentConfig(
@@ -86,7 +99,7 @@ def main():
                 stream=False,
             )
         except Exception as e:
-            print(f"Proxy Connection Error: {e}")
+            logger.error(f"Proxy Connection Error: {e}")
             break
 
         assistant_message = response.choices[0].message  # type: ignore
@@ -101,8 +114,9 @@ def main():
         # 4. Check if the model wants to call tools
         if assistant_message.tool_calls is not None:
 
-            if verbose_flag:
-                print("Model requested tool calls...")
+            logger.info(
+                f"Model requested {len(assistant_message.tool_calls)} tool call(s)."
+            )
 
             for tool_call in assistant_message.tool_calls:
                 function_name = tool_call.function.name
@@ -113,10 +127,11 @@ def main():
                     function_args = json.loads(tool_call.function.arguments)
                 except json.JSONDecodeError:
                     function_args = {}
+                    logger.warning(
+                        f"Failed to parse JSON arguments for {function_name}. Defaulting to empty dict."
+                    )
 
-                result_string = call_function(
-                    function_name, function_args, verbose_flag
-                )
+                result_string = call_function(function_name, function_args)
 
                 context.add_message(
                     {
@@ -128,8 +143,10 @@ def main():
                 )
 
         else:
-            # If there are no tool calls, the model has finished its final answer
-            print("Final Answer:\n", assistant_message.content)
+            logger.info("Agent has formulated a final answer.")
+            print("\n================ FINAL ANSWER ================\n")
+            print(assistant_message.content)
+            print("\n==============================================\n")
             break
 
         time.sleep(1)

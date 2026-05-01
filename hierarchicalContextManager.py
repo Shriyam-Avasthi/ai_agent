@@ -1,10 +1,13 @@
 import copy
+import logging
 import os
 
 import litellm
 import tiktoken
 
-from config import PROXY_URL
+from config import LOGGER_ID, PROXY_URL
+
+logger = logging.getLogger(LOGGER_ID)
 
 
 class HierarchicalContextManager:
@@ -37,6 +40,10 @@ class HierarchicalContextManager:
         # Short term memory.
         self.active_messages = []
 
+        logger.debug(
+            f"HierarchicalContextManager initialized. Max active tokens: {self.max_active_tokens}"
+        )
+
     def count_tokens(self, text):
         return len(self.encoder.encode(str(text)))
 
@@ -52,7 +59,8 @@ class HierarchicalContextManager:
                 "role": "system",
                 "content": f"=== AGENT SCRATCHPAD (ACTIVE WORKING MEMORY) ===\n{content}\n=================================================",
             }
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to read agent scratchpad: {e}")
             return {
                 "role": "system",
                 "content": "=== AGENT SCRATCHPAD ===\n[Error reading scratchpad]\n=============",
@@ -61,14 +69,16 @@ class HierarchicalContextManager:
     def set_core_prompts(self, system_content, user_content):
         self.system_prompt = {"role": "system", "content": system_content}
         self.initial_user_query = {"role": "user", "content": user_content}
-        if self.verbose:
-            print(f"Core prompts set:\nSystem Prompt: {self.system_prompt}\nUser Query: {self.initial_user_query}")
+        logger.info("Core system and user prompts set.")
+        logger.debug(f"System Prompt: {self.system_prompt}")
+        logger.debug(f"User Query: {self.initial_user_query}")
 
     def add_message(self, message):
         self.active_messages.append(copy.deepcopy(message))
         self._manage_context()
-        if self.verbose:
-            print(f"Memory updated successfully. New memory: {self.active_messages}")
+        logger.debug(
+            f"Appended new message to active context. Role: {message.get('role')}"
+        )
 
     def _manage_context(self):
         # Keep last 6 messages and truncate earlier ones.
@@ -84,8 +94,15 @@ class HierarchicalContextManager:
                     msg["content"] = (
                         "[TOOL OUTPUT TRUNCATED DUE TO AGE. The agent should rely on its notes/memory for this information.]"
                     )
+                    logger.debug(
+                        f"Truncated large tool output at index {i} due to age."
+                    )
 
         active_tokens = sum(self.count_tokens(str(m)) for m in self.active_messages)
+        logger.debug(
+            f"Current active token count: {active_tokens} / {self.max_active_tokens}"
+        )
+
         if active_tokens > self.max_active_tokens:
             self._summarize_and_evict()
 
@@ -96,6 +113,10 @@ class HierarchicalContextManager:
 
         if len(self.active_messages) <= messages_to_evict:
             return
+
+        logger.info(
+            f"Token limit exceeded. Evicting and summarizing the oldest {messages_to_evict} messages."
+        )
 
         evicted = self.active_messages[:messages_to_evict]
         self.active_messages = self.active_messages[messages_to_evict:]
@@ -132,8 +153,14 @@ class HierarchicalContextManager:
                 stream=False,
             )
             self.rolling_summary = response.choices[0].message.content  # type: ignore
+            logger.debug(
+                f"Successfully generated new rolling summary: \n{self.rolling_summary}"
+            )
+
         except Exception as e:
-            print(f"Warning: Summarization failed: {e}")
+            logger.error(
+                "Summarization API call failed. Applying fallback note.", exc_info=True
+            )
             # Fallback: Just append a note rather than crashing
             self.rolling_summary += (
                 "\n[Note: Some intermediate steps were truncated due to length limits.]"
@@ -146,6 +173,7 @@ class HierarchicalContextManager:
             {"role": "system", "content": f"HISTORY SUMMARY:\n{self.rolling_summary}"}
         ]
         final_payload = core + scratchpad + summary_msg + self.active_messages
-        if self.verbose:
-            print(f"Retrieved message for api: {final_payload}")
+        logger.debug(
+            f"Assembled final API payload with {len(final_payload)} total messages."
+        )
         return final_payload

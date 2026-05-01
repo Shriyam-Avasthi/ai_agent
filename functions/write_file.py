@@ -47,7 +47,7 @@ schema_write_file = {
     "type": "function",
     "function": {
         "name": "write_file",
-        "description": "Overwrites an existing file or writes to a new file if it doesn't exists (and creates required parent directories safely), constrained to the current working directory",
+        "description": "Overwrites an existing file or writes to a new file if it doesn't exists (and creates required parent directories safely), constrained to the current working directory. NOTE: Prioritize using edit_file function. This should ONLY be used when absolutely necessary, and other tools don't satisfy the requirement.",
         "parameters": {
             "type": "object",
             "properties": {
