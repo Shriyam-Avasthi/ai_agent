@@ -1,10 +1,10 @@
 MAX_CHARS = 10000
-WORKING_DIR = "calculator"
+WORKING_DIR = "."
 PROXY_URL = "http://localhost:4000"
 LOGGER_ID = "ai_agent"
 
 
-SYSTEM_PROMPT = f"""You are an expert autonomous AI coding agent. 
+BASE_SYSTEM_PROMPT = f"""You are an expert autonomous AI coding agent. 
 You are currently operating in the "{WORKING_DIR}" directory.
 
 Your goal is to solve the user's request by exploring the codebase, understanding the context, and making precise modifications.

@@ -9,7 +9,7 @@ model_list:
       api_key: os.environ/GEMINI_API_KEY
       drop_params: true
       rpm: 30
-      tpm: 8000
+      tpm: 60000
 
   # 2. The Heavy Context Analyzer (1M Token Window)
   - model_name: heavy-context

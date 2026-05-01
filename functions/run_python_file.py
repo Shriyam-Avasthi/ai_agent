@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 
-def run_python_file(working_dir: str, file_path: str, cli_args: list | None = None) -> str:
+def run_python_file(working_dir: str, file_path: str, args: list | None = None) -> str:
     full_path = os.path.join(working_dir, file_path)
     abs_working_dir = os.path.abspath(working_dir)
     abs_file_path = os.path.abspath(os.path.join(working_dir, file_path))
@@ -43,8 +43,8 @@ def run_python_file(working_dir: str, file_path: str, cli_args: list | None = No
         venv_python, file_path,  # Run the script using the active venv
     ]
 
-    if cli_args:
-        cmd.extend(cli_args)
+    if args:
+        cmd.extend(args)
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
@@ -70,7 +70,7 @@ schema_run_python_file = {
     "type": "function",
     "function": {
         "name": "run_python_file",
-        "description": "Runs a python file with the python3 interpreter. Accepts additional CLI args as an optional array.",
+        "description": "Runs a python file with the python3 interpreter. Accepts additional args as an optional array.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -80,7 +80,7 @@ schema_run_python_file = {
                 },
                 "args": {
                     "type": "array",
-                    "description": "An optional array of strings to be used as the CLI args for the Python file.",
+                    "description": "An optional array of strings to be used as the args for the Python file.",
                     "items": {"type": "string"},
                 },
             },

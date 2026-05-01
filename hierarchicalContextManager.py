@@ -117,6 +117,7 @@ class HierarchicalContextManager:
         active_tokens = active_tokens = sum(
             self.count_tokens(str(self._sanitize_msg(m))) for m in self.active_messages
         )
+        active_tokens += self.count_tokens(self.system_prompt)
         logger.debug(
             f"Current active token count: {active_tokens} / {self.max_active_tokens}"
         )
@@ -191,7 +192,7 @@ class HierarchicalContextManager:
         try:
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write("# Active Agent Conversation\n\n")
-                f.write("*This file is auto-generated and overwritten during the agent's run.*\n\n---\n")
+                f.write("*This file is auto-generated and overwritten during the agent's run.*\n\n---\n\n")
                 
                 full_context = self.get_messages_for_api(sanitize_messages=False, logging_enabled=False)
                 
@@ -200,24 +201,37 @@ class HierarchicalContextManager:
                     content = msg.get("content", "")
                     tool_calls = msg.get("tool_calls", None)
                     
-                    f.write(f"### {role}\n")
+                    f.write(f"### {role}\n\n")
                     
                     if content:
-                        f.write(f"{content}\n\n")
+                        if role in ["TOOL", "SYSTEM"]:
+                            f.write("```text\n")
+                            f.write(f"{content}\n")
+                            f.write("```\n\n")
+                        else:
+                            # Assistant and User messages usually contain their own markdown
+                            f.write(f"{content}\n\n")
                     
-                    # Format tool calls cleanly if they exist
                     if tool_calls:
                         f.write("**Tool Calls Requested:**\n```json\n")
-                        f.write(json.dumps(tool_calls)) 
+                        try:
+                            if isinstance(tool_calls, str):
+                                parsed = json.loads(tool_calls)
+                                f.write(json.dumps(parsed, indent=2))
+                            else:
+                                f.write(json.dumps(tool_calls, indent=2))
+                        except Exception:
+                            f.write(str(tool_calls))
                         f.write("\n```\n\n")
 
                     for key, value in msg.items():
                         if key not in ["role", "content", "tool_calls"] and value:
                             f.write(f"**Hidden Field (`{key}`):**\n```text\n")
-                            f.write(str(value))
+                            if isinstance(value, (dict, list)):
+                                f.write(json.dumps(value, indent=2))
+                            else:
+                                f.write(str(value))
                             f.write("\n```\n\n")
-                        
-                    f.write("---\n")
                     
         except Exception as e:
             logger.error(f"Failed to write conversation log: {e}")

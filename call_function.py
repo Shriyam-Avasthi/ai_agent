@@ -9,6 +9,7 @@ from functions.get_file_skeleton import get_file_skeleton
 from functions.list_directory import list_directory
 from functions.manage_scratchpad import manage_scratchpad
 from functions.run_python_file import run_python_file
+from functions.search_codebase import search_codebase
 from functions.write_file import write_file
 
 TOOL_REGISTRY = {
@@ -19,6 +20,7 @@ TOOL_REGISTRY = {
     "expand_block": expand_block,
     "get_file_skeleton": get_file_skeleton,
     "list_directory": list_directory,
+    "search_codebase": search_codebase,
 }
 
 working_directory = WORKING_DIR

@@ -5,7 +5,7 @@ import time
 import litellm
 
 from call_function import call_function
-from config import PROXY_URL, SYSTEM_PROMPT, WORKING_DIR
+from config import PROXY_URL, BASE_SYSTEM_PROMPT, WORKING_DIR
 from functions.edit_file import schema_edit_file
 from functions.expand_block import schema_expand_block
 from functions.get_file_skeleton import schema_get_file_skeleton
@@ -13,6 +13,8 @@ from functions.list_directory import schema_list_directory
 from functions.manage_scratchpad import schema_manage_scratchpad
 from functions.run_python_file import schema_run_python_file
 from functions.write_file import schema_write_file
+from functions.workspace_state import skeletonizer_instance
+from functions.search_codebase import schema_search_codebase
 from hierarchicalContextManager import HierarchicalContextManager
 from logger_setup import setup_logger
 
@@ -36,7 +38,9 @@ def main():
 
     prompt = args.prompt
 
-    system_prompt = SYSTEM_PROMPT
+    system_prompt = BASE_SYSTEM_PROMPT
+    repo_map = skeletonizer_instance.generate_repo_map(WORKING_DIR)
+    system_prompt += f"Here is the high level map of the entire workspace:\n\n{repo_map}"
     # messages = [
     #     types.Content(role="user", parts=[types.Part(text=prompt)]),
     # ]
@@ -58,6 +62,7 @@ def main():
         schema_expand_block,
         schema_get_file_skeleton,
         schema_list_directory,
+        schema_search_codebase,
     ]
 
     # config = types.GenerateContentConfig(

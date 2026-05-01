@@ -1,4 +1,5 @@
 import hashlib
+import os
 
 from treeSitterBase import TreeSitterBase
 
@@ -63,6 +64,61 @@ class CodeSkeletonizer(TreeSitterBase):
                 self._walk_node(cursor, source_bytes, output, indent, file_path)
                 if not cursor.goto_next_sibling():
                     break
+            cursor.goto_parent()
+
+    def generate_repo_map(self, working_dir: str) -> str:
+        output = ["=== REPOSITORY ARCHITECTURE ==="]
+        ignore_dirs = {'.venv', '__pycache__', '.git', 'node_modules', 'outputs'}
+        
+        for root, dirs, files in os.walk(working_dir):
+            dirs[:] = [d for d in dirs if d not in ignore_dirs and not d.startswith('.')]
+            for file in sorted(files):
+                if file.endswith('.py'):
+                    file_path = os.path.join(root, file)
+                    file_map = self._generate_shallow_skeleton(file_path)
+                    
+                    if file_map:  # Only add files that actually contain classes/functions
+                        rel_path = os.path.relpath(file_path, working_dir)
+                        output.append(f"\n {rel_path}")
+                        output.extend(file_map)
+                        
+        return "\n".join(output)
+
+    def _generate_shallow_skeleton(self, file_path):
+        try:
+            source_code = self._read_file(file_path)
+            source_bytes = bytes(source_code, "utf8")
+            tree = self.parser.parse(source_bytes)
+            
+            output = []
+            self._walk_shallow(tree.root_node.walk(), source_bytes, output, indent=1, file_path=file_path)
+            return output
+        except Exception:
+            return []
+
+    def _walk_shallow(self, cursor, source_bytes, output, indent, file_path):
+        node = cursor.node
+        prefix = "    " * indent
+
+        if node.type in ["function_definition", "class_definition"]:
+            sig = self._extract_signature(node, source_bytes)
+            block_id = self._generate_block_id(file_path, node)
+            output.append(f"{prefix}{sig} # [Expand: {block_id}]")
+
+            # Only dig deeper if it's a class to get its methods
+            if node.type == "class_definition":
+                if cursor.goto_first_child():
+                    while True:
+                        self._walk_shallow(cursor, source_bytes, output, indent + 1, file_path)
+                        if not cursor.goto_next_sibling(): break
+                    cursor.goto_parent()
+            return # Skip the function body entirely for the shallow map
+
+        # Default traversal for modules and blocks to find top-level definitions
+        if cursor.goto_first_child():
+            while True:
+                self._walk_shallow(cursor, source_bytes, output, indent, file_path)
+                if not cursor.goto_next_sibling(): break
             cursor.goto_parent()
 
     def expand_block(self, block_id, max_lines=10):
