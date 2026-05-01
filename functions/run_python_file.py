@@ -25,7 +25,7 @@ def run_python_file(working_dir: str, file_path: str, args: list | None = None) 
 
     cmd = [
         "bwrap",
-        "--unshare-net",
+        "--share-net",
         "--die-with-parent",
         # MOUNT 1: The entire host OS as Strictly READ-ONLY
         "--ro-bind",
@@ -47,7 +47,7 @@ def run_python_file(working_dir: str, file_path: str, args: list | None = None) 
         cmd.extend(args)
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10000)
 
         output = []
         if result.stdout:

@@ -46,10 +46,6 @@ class HierarchicalContextManager:
         )
 
     def _sanitize_msg(self, msg):
-        """
-        Removes all provider-specific bloat (thinking blocks, metadata).
-        Strictly keeps only the standard keys required for inference.
-        """
         allowed_keys = {"role", "content", "tool_calls", "tool_call_id", "name"}
         return {k: v for k, v in msg.items() if k in allowed_keys}
 

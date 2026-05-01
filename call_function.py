@@ -7,6 +7,7 @@ from functions.edit_file import edit_file
 from functions.expand_block import expand_block
 from functions.get_file_skeleton import get_file_skeleton
 from functions.list_directory import list_directory
+from functions.load_skill import load_skill
 from functions.manage_scratchpad import manage_scratchpad
 from functions.run_python_file import run_python_file
 from functions.search_codebase import search_codebase
@@ -21,6 +22,7 @@ TOOL_REGISTRY = {
     "get_file_skeleton": get_file_skeleton,
     "list_directory": list_directory,
     "search_codebase": search_codebase,
+    "load_skill": load_skill
 }
 
 working_directory = WORKING_DIR
