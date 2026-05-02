@@ -1,58 +1,34 @@
-# Playwright Browser Skill
-Use this skill to fetch data from the internet. Write a Python script and execute it via `run_python_file`.
+# Live Browser Interaction Skill
+A persistent, anti-bot configured Chromium browser is currently running on Port 9222. You have three primary methods to interact with the web.
+### 1. Navigation & Anti-Bot Strategy (CRITICAL)
+Modern websites actively block bots. To navigate reliably, you MUST follow these rules:
+*   **DO NOT** use Google.com. It will instantly block you.
+*   **DO NOT** guess exact URLs for specific database items (like Codeforces contests or Jira tickets). Internal IDs do not match public IDs.
+*   **DO** use search-assisted navigation via DuckDuckGo: `browser_navigate("https://html.duckduckgo.com/html/?q=Your+Query")`. 
+*   **SEARCH HEURISTIC (The Pivot):** If the search results do not contain the direct link to the tool/problem you need, **do not keep searching**. Instead, click on the official pages like the Documentation page, or the github repo. These pages MOSTLY contain hyperlinks closely related to the search query, that's why they are ranked high on the search engine. Navigate there, then click the link you need.
+*   **ADVANCED SEARCH:** Use advanced flags like `site:required_site.com` in your query to filter out YouTube videos and GitHub repos.
 
-**CRITICAL RULES:**
-1. ALWAYS default to `headless=False`, unless the user explicitly asks to use headless mode.
-2. If you are using `headless=False`, then make sure to keep this at the end of the script `page.wait_for_event('close')` so that the user can interact with the browser later.
-3. DO NOT use `google.com` for searches. It blocks bots. Use `https://html.duckduckgo.com/html/?q=YOUR+QUERY`.
-4. DO NOT rely on specific CSS selectors (e.g., `page.locator('.temp')`). They will fail. Instead, extract the page content using BeautifulSoup and print the raw text.
-5. Limit your printed output to 2000 characters to protect your context window.
-6. Use aggresive stealth measures to avoid being flagged as a bot while browsing the internet.
-7. Whatever scripts you write should be strictly in a `temp/Browser` folder.
+### 2. Standard Interaction (Token Optimized)
+Use atomic tools to navigate the UI. When you call these tools, you will receive a screenshot and a highly optimized DOM Map of ONLY the visible, interactive elements.
+*   `browser_navigate(url)`: Loads a page.
+*   `browser_action(action_type, element_id, text)`: Interact with the UI. Valid actions: `click`, `type`, `hover`.
+*   **Scrolling:** If an element is off-screen, it will NOT be in the DOM map. Use `browser_action('scroll_down')` to move down the page and refresh the DOM Map.
 
-**Bulletproof Template:**
+### 3. Targeted Extraction (Avoiding Token Bloat)
+The DOM Map only shows buttons and links. It DOES NOT show long paragraphs, problem statements, or articles. 
+*   If you dump the whole page HTML into your context window, you will fail.
+*   To read static content, you MUST use the `browser_extract(selector)` tool.
+*   Target your extraction! Use specific CSS selectors (e.g., `main`, `article`) to get exactly what you need without pulling in sidebars and footers.
+
+### 4. Complex Scripting (The CDP Bridge)
+If a visual element is hidden in a Canvas, requires drag-and-drop, or isn't caught by the standard tools, you can take manual control. Write a Python script using `run_python_file` to connect directly to the live window via CDP:
+Note that write all these python scripts strictly in this folder: 'temp/browser'
 ```python
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
-import sys
-
-def run():
-    with sync_playwright() as p:
-        # 1. Run headless by default
-        browser = p.chromium.launch(
-            headless=False,
-            args=["--disable-blink-features=AutomationControlled"] # Strips the bot flag
-        )
-        context = browser.new_context(
-            user_agent="Chrome/120.0.0.0",
-            viewport={"width": 1920, "height": 1080}
-        )
-        page = browser.new_page()
-        
-        # 2. Navigate (Use DuckDuckGo for searches to avoid CAPTCHAs)
-        target_url = '[https://html.duckduckgo.com/]()'
-        try:
-            page.goto(target_url, timeout=10000)
-            page.wait_for_load_state('domcontentloaded')
-        except Exception as e:
-            print(f"Navigation failed: {e}")
-            sys.exit(1)
-            
-        # 3. Extract pure text to avoid brittle CSS selectors
-        html = page.content()
-        soup = BeautifulSoup(html, "html.parser")
-        
-        # Remove scripts and styles
-        for script in soup(["script", "style"]):
-            script.extract()
-            
-        text = soup.get_text(separator=' ', strip=True)
-        
-        # 4. Print the first 2000 chars for the agent to read
-        print(text[:2000])
-        page.wait_for_event('close')
-        browser.close()
-
-if __name__ == '__main__':
-    run()
-```
+with sync_playwright() as p:
+    # Connect to the ALREADY RUNNING browser on port 9222
+    browser = p.chromium.connect_over_cdp("http://localhost:9222")
+    page = browser.contexts[0].pages[0]
+    
+    # Execute complex, coordinate-based Playwright commands
+    page.mouse.click(500, 300)

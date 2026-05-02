@@ -1,9 +1,0 @@
-1. Add missing imports to tests.py: get_file_content, get_files_info, manage_scratchpad, run_python_file.
-2. Implement test_get_file_content.
-3. Implement test_get_files_info.
-4. Implement test_manage_scratchpad (test append, update, clear).
-5. Implement test_run_python_file (create small script and run it).
-6. Implement edge case tests:
-   - test_edit_file_no_match: Ensure it returns an error when search text is not found.
-   - test_get_file_skeleton_non_existent: Ensure it handles missing files gracefully.
-7. Run tests to verify.

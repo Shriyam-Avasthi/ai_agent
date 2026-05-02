@@ -16,6 +16,7 @@ from functions.search_codebase import schema_search_codebase
 from functions.workspace_state import skeletonizer_instance
 from functions.write_file import schema_write_file
 from functions.load_skill import schema_load_skill
+from functions.browser_tools import schema_browser_action, schema_browser_navigate, schema_browser_extract
 from hierarchicalContextManager import HierarchicalContextManager
 from logger_setup import setup_logger
 
@@ -67,6 +68,9 @@ def main():
         schema_list_directory,
         schema_search_codebase,
         schema_load_skill,
+        schema_browser_navigate,
+        schema_browser_action,
+        schema_browser_extract,
     ]
 
     # config = types.GenerateContentConfig(

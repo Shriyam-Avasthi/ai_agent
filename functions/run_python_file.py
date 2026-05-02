@@ -27,6 +27,8 @@ def run_python_file(working_dir: str, file_path: str, args: list | None = None) 
         "bwrap",
         "--share-net",
         "--die-with-parent",
+        "--setenv", "PYTHONPATH", abs_working_dir,
+
         # MOUNT 1: The entire host OS as Strictly READ-ONLY
         "--ro-bind",
         "/", "/",

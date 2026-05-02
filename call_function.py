@@ -3,6 +3,7 @@ import json
 import logging
 
 from config import LOGGER_ID, WORKING_DIR
+from functions.browser_tools import browser_action, browser_extract, browser_navigate
 from functions.edit_file import edit_file
 from functions.expand_block import expand_block
 from functions.get_file_skeleton import get_file_skeleton
@@ -22,7 +23,10 @@ TOOL_REGISTRY = {
     "get_file_skeleton": get_file_skeleton,
     "list_directory": list_directory,
     "search_codebase": search_codebase,
-    "load_skill": load_skill
+    "load_skill": load_skill,
+    "browser_navigate": browser_navigate,
+    "browser_action": browser_action,
+    "browser_extract": browser_extract,
 }
 
 working_directory = WORKING_DIR

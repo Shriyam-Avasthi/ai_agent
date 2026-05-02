@@ -232,6 +232,21 @@ class HierarchicalContextManager:
         except Exception as e:
             logger.error(f"Failed to write conversation log: {e}")
 
+    # def _format_multimodal_msg(self, msg):
+    #     if msg.get("role") == "tool" and "content" in msg:
+    #         try:::
+    #             # Try parsing the tool output to see if it's our browser JSON
+    #             data = json.loads(msg["content"])
+    #             if "screenshot" in data and data["screenshot"]:
+    #                 # Format as LiteLLM Multimodal Array
+    #                 msg["content"] = [
+    #                     {"type": "text", "text": data.get("dom_map", data.get("error", ""))},
+    #                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{data['screenshot']}"}}
+    #                 ]
+    #         except Exception:
+    #             pass # Not a JSON browser response, leave as standard text
+    #     return msg
+
     def get_messages_for_api(self, sanitize_messages=True, logging_enabled=True):
         core = [self.system_prompt, self.initial_user_query]
         scratchpad = [self.get_agent_scratchpad()]
@@ -240,9 +255,10 @@ class HierarchicalContextManager:
         ]
         if sanitize_messages: 
             sanitized_messages = [self._sanitize_msg(m) for m in self.active_messages]
-            
+            # formatted_messages = [self._format_multimodal_msg(m) for m in sanitized_messages]
             final_payload = core + scratchpad + summary_msg + sanitized_messages
         else:
+            # formatted_messages = [self._format_multimodal_msg(m) for m in self.active_messages]
             final_payload = core + scratchpad + summary_msg + self.active_messages
         
         if logging_enabled:
